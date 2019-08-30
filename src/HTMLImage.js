@@ -97,7 +97,11 @@ export default class HTMLImage extends PureComponent {
                 this.mounted && this.setState({ width: optimalWidth, height: optimalHeight, error: false });
             },
             () => {
-                this.mounted && this.setState({ error: true });
+                // If we can't get Image.getSize, default to a square image with width and height set to imagesMaxWidth.
+                // The reason is that when loading a lot of Images on the same time on android, Image.getSize
+                // failes on some of them and then the images are not shown. This was experienced in the myshoes app on the
+                // PageScreen with a lot (>20) images.
+                this.mounted && this.setState({ width: imagesMaxWidth, height: imagesMaxWidth, error: false });
             }
         );
     }
