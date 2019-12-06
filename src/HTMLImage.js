@@ -7,7 +7,19 @@ export default class HTMLImage extends PureComponent {
         super(props);
         this.state = {
             width: props.imagesInitialDimensions.width,
-            height: props.imagesInitialDimensions.height
+            height: props.imagesInitialDimensions.height,
+
+            /**
+             * We have the issue when image gets blurry on iOS devices (on Android not detected).
+             * To fix the issue, we want to skip rendering of Image component on the first render cycle. This is
+             * because react-native Image component sometimes don't reaload image. This issue is related to 
+             * https://github.com/facebook/react-native/pull/23641 and can probably be fixed when 
+             * react-native version is upgraded.
+             * 
+             * We have added imageLoaded which will prevent rendering of Image component until we get
+             * correct image dimensions.
+             */
+            imageLoaded: false
         };
     }
 
@@ -93,15 +105,16 @@ export default class HTMLImage extends PureComponent {
                     return this.mounted && this.setState({ width: originalWidth, height: originalHeight });
                 }
                 const optimalWidth = imagesMaxWidth <= originalWidth ? imagesMaxWidth : originalWidth;
-                const optimalHeight = (optimalWidth * originalHeight) / originalWidth;
-                this.mounted && this.setState({ width: optimalWidth, height: optimalHeight, error: false });
+                const optimalHeight =  (optimalWidth * originalHeight) / originalWidth;
+                
+                this.mounted && this.setState({ width: optimalWidth, height: optimalHeight, imageLoaded: true, error: false });
             },
             () => {
                 // If we can't get Image.getSize, default to a square image with width and height set to imagesMaxWidth.
                 // The reason is that when loading a lot of Images on the same time on android, Image.getSize
                 // failes on some of them and then the images are not shown. This was experienced in the myshoes app on the
                 // PageScreen with a lot (>20) images.
-                this.mounted && this.setState({ width: imagesMaxWidth, height: imagesMaxWidth, error: false });
+                this.mounted && this.setState({ width: imagesMaxWidth, height: imagesMaxWidth, imageLoaded: true, error: false });
             }
         );
     }
@@ -127,6 +140,7 @@ export default class HTMLImage extends PureComponent {
     render () {
         const { source, style, passProps } = this.props;
 
-        return !this.state.error ? this.validImage(source, style, passProps) : this.errorImage;
+        // Show image when we know correct dimensions
+        return this.state.imageLoaded && this.validImage(source, style, passProps);
     }
 }
