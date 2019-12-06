@@ -141,6 +141,11 @@ export default class HTMLImage extends PureComponent {
         const { source, style, passProps } = this.props;
 
         // Show image when we know correct dimensions
-        return this.state.imageLoaded && this.validImage(source, style, passProps);
+        if(this.state.imageLoaded) {
+            return this.validImage(source, style, passProps);
+        }
+        else {
+            return null;
+        }
     }
 }
