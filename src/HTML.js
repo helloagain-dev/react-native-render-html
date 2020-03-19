@@ -13,7 +13,7 @@ import {
     PREFORMATTED_TAGS
 } from './HTMLUtils';
 import { generateDefaultBlockStyles, generateDefaultTextStyles } from './HTMLDefaultStyles';
-import htmlparser2 from 'htmlparser2';
+import { DomHandler, Parser } from 'htmlparser2';
 import * as HTMLRenderers from './HTMLRenderers';
 
 export default class HTML extends PureComponent {
@@ -75,36 +75,28 @@ export default class HTML extends PureComponent {
             ...HTMLRenderers,
             ...(this.props.renderers || {})
         };
-    }
 
-    componentWillMount () {
-        this.generateDefaultStyles();
+        this.generateDefaultStyles(props.baseFontStyle);
     }
 
     componentDidMount () {
         this.registerDOM();
     }
 
-    componentWillReceiveProps (nextProps) {
-        const { html, uri, renderers } = this.props;
+    componentDidUpdate(prevProps, prevState) {
+        const { html, uri, renderers } = prevProps;
+        let doParseDOM = false;
 
-        this.generateDefaultStyles(nextProps.baseFontStyle);
-        if (renderers !== nextProps.renderers) {
-            this.renderers = { ...HTMLRenderers, ...(nextProps.renderers || {}) };
+        this.generateDefaultStyles(this.props.baseFontStyle);
+        if (renderers !== this.props.renderers) {
+            this.renderers = { ...HTMLRenderers, ...(this.props.renderers || {}) };
         }
-        if (html !== nextProps.html || uri !== nextProps.uri) {
+        if (html !== this.props.html || uri !== this.props.uri) {
             // If the source changed, register the new HTML and parse it
-            this.registerDOM(nextProps);
-        } else {
-            // If it didn't, let's just parse the current DOM and re-render the nodes
-            // to compute potential style changes
-            this.parseDOM(this.state.dom, nextProps);
+            this.registerDOM(this.props);
         }
-    }
-
-    componentDidUpdate (prevProps, prevState) {
         if (this.state.dom !== prevState.dom) {
-            this.parseDOM(this.state.dom);
+            this.parseDOM(this.state.dom, this.props);
         }
     }
 
@@ -135,8 +127,8 @@ export default class HTML extends PureComponent {
 
     parseDOM (dom, props = this.props) {
         const { decodeEntities, debug, onParsed } = this.props;
-        const parser = new htmlparser2.Parser(
-            new htmlparser2.DomHandler((_err, dom) => {
+        const parser = new Parser(
+            new DomHandler((_err, dom) => {
                 let RNElements = this.mapDOMNodesTORNElements(dom, false, props);
                 if (onParsed) {
                     const alteredRNElements = onParsed(dom, RNElements);
